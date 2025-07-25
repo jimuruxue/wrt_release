@@ -123,10 +123,10 @@ $BASE_PATH/update.sh "$REPO_URL" "$REPO_BRANCH" "$BASE_PATH/$BUILD_DIR" "$COMMIT
 
 # 移除 uhttpd 依赖
 remove_uhttpd_dependency
-# 修改内核大小
-set_kernel_size
 # 添加 eBPF 配置
 cat_ebpf_config "$BASE_PATH/$BUILD_DIR/.config"
+# 修改内核大小
+set_kernel_size
 # 添加内核配置
 cat_kernel_config "$BASE_PATH/$BUILD_DIR/.config"
 
