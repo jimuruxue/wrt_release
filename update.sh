@@ -23,7 +23,7 @@ FEEDS_CONF="feeds.conf.default"
 GOLANG_REPO="https://github.com/sbwml/packages_lang_golang"
 GOLANG_BRANCH="25.x"
 THEME_SET="argon"
-LAN_ADDR="192.168.1.1"
+LAN_ADDR="192.168.10.1"
 
 clone_repo() {
     if [[ ! -d $BUILD_DIR ]]; then
@@ -164,7 +164,7 @@ install_small8() {
         luci-app-quickstart luci-app-istorex luci-app-cloudflarespeedtest netdata luci-app-netdata \
         lucky luci-app-lucky luci-app-openclash luci-app-homeproxy luci-app-amlogic nikki luci-app-nikki \
         tailscale luci-app-tailscale oaf open-app-filter luci-app-oaf easytier luci-app-easytier \
-        msd_lite luci-app-msd_lite cups luci-app-cupsd
+        msd_lite luci-app-msd_lite cups luci-app-cupsd luci-app-unishare unishare webdav2
 }
 
 install_fullconenat() {
@@ -434,7 +434,10 @@ apply_passwall_tweaks() {
 install_opkg_distfeeds() {
     local emortal_def_dir="$BUILD_DIR/package/emortal/default-settings"
     local distfeeds_conf="$emortal_def_dir/files/99-distfeeds.conf"
+    local lean_def_dir="$BUILD_DIR/package/lean/default-settings"
+    local zzz_default_settings="$lean_def_dir/files/zzz-default-settings"
 
+    # 检查是否存在 emortal_def_dir 和 distfeeds_conf
     if [ -d "$emortal_def_dir" ] && [ ! -f "$distfeeds_conf" ]; then
         cat <<'EOF' >"$distfeeds_conf"
 src/gz openwrt_base https://downloads.immortalwrt.org/releases/24.10-SNAPSHOT/packages/aarch64_cortex-a53/base/
@@ -446,11 +449,31 @@ EOF
 
         sed -i "/define Package\/default-settings\/install/a\\
 \\t\$(INSTALL_DIR) \$(1)/etc\\n\
-\t\$(INSTALL_DATA) ./files/99-distfeeds.conf \$(1)/etc/99-distfeeds.conf\n" $emortal_def_dir/Makefile
+\t\$(INSTALL_DATA) ./files/99-distfeeds.conf \$(1)/etc/99-distfeeds.conf\n" "$emortal_def_dir/Makefile"
 
         sed -i "/exit 0/i\\
 [ -f \'/etc/99-distfeeds.conf\' ] && mv \'/etc/99-distfeeds.conf\' \'/etc/opkg/distfeeds.conf\'\n\
-sed -ri \'/check_signature/s@^[^#]@#&@\' /etc/opkg.conf\n" $emortal_def_dir/files/99-default-settings
+sed -ri \'/check_signature/s@^[^#]@#&@\' /etc/opkg.conf\n" "$emortal_def_dir/files/99-default-settings"
+
+    # 检查是否存在 lean_def_dir 和 zzz_default_settings
+    elif [ -d "$lean_def_dir" ] && [ -f "$zzz_default_settings" ]; then
+        # 使用更简单的模式删除包含特定内容的行
+        sed -i '/openwrt_luci/d' "$zzz_default_settings"
+        sed -i '/mirrors.tencent.com/d' "$zzz_default_settings"
+
+        # 使用 cat 命令将新的软件源配置追加到文件末尾
+        cat << 'NEW_END' >> "$zzz_default_settings"
+
+cat << EOF > /etc/opkg/distfeeds.conf
+src/gz openwrt_base https://downloads.immortalwrt.org/releases/24.10-SNAPSHOT/packages/aarch64_cortex-a53/base/
+src/gz openwrt_luci https://downloads.immortalwrt.org/releases/24.10-SNAPSHOT/packages/aarch64_cortex-a53/luci/
+src/gz openwrt_packages https://downloads.immortalwrt.org/releases/24.10-SNAPSHOT/packages/aarch64_cortex-a53/packages/
+src/gz openwrt_routing https://downloads.immortalwrt.org/releases/24.10-SNAPSHOT/packages/aarch64_cortex-a53/routing/
+src/gz openwrt_telephony https://downloads.immortalwrt.org/releases/24.10-SNAPSHOT/packages/aarch64_cortex-a53/telephony/
+EOF
+NEW_END
+        echo "替换软件源完成！"
+
     fi
 }
 
